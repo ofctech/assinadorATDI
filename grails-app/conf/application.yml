@@ -1,0 +1,146 @@
+---
+grails:
+    profile: rest-api
+    codegen:
+        defaultPackage: assinador
+    gorm:
+        reactor:
+            events: false
+info:
+    app:
+        name: '@info.app.name@'
+        version: '@info.app.version@'
+        grailsVersion: '@info.app.grailsVersion@'
+spring:
+    jmx:
+        unique-names: true
+    main:
+        banner-mode: "off"
+    groovy:
+        template:
+            check-template-location: false
+    servlet:
+        multipart:
+            max-file-size: 3MB
+            max-request-size: 4MB
+    devtools:
+        restart:
+            additional-exclude:
+                - '*.gsp'
+                - '**/*.gsp'
+                - '*.gson'
+                - '**/*.gson'
+                - 'logback.groovy'
+                - '*.properties'
+server:
+    port: 8091
+---
+idp:
+    issuer: "https://assinadorapi.incm.gov.mz"
+    audience: "grails-api"
+    tokenTtlSeconds: 900
+    keystore:
+        path: ${IDP_KEYSTORE_PATH}
+        storePass: ${IDP_KEYSTORE_STORE_PASS}
+        keyAlias: ${IDP_KEYSTORE_KEY_ALIAS:idp-signing-v1}
+        keyPass: ${IDP_KEYSTORE_KEY_PASS}
+    jwks:
+        cacheSeconds: 300
+ldap:
+    url: "ldap://10.10.10.73:389/dc=sede,dc=incm,dc=gov,dc=mz"
+    domainPrefix: "sede\\"
+    connectTimeoutMs: 3000
+    readTimeoutMs: 3000
+signer:
+    baseUrl: "https://assinadoravancado.gov.mz"
+    connectTimeoutMs: 10000
+    readTimeoutMs: 60000
+    maxFileSizeBytes: 3145728
+---
+management:
+    endpoints:
+        enabled-by-default: false
+---
+grails:
+    mime:
+        disable:
+            accept:
+                header:
+                    userAgents:
+                        - Gecko
+                        - WebKit
+                        - Presto
+                        - Trident
+        types:
+            json:
+              - application/json
+              - text/json
+            hal:
+              - application/hal+json
+              - application/hal+xml
+            xml:
+              - text/xml
+              - application/xml
+            atom: application/atom+xml
+            css: text/css
+            csv: text/csv
+            js: text/javascript
+            rss: application/rss+xml
+            text: text/plain
+            all: '*/*'
+    urlmapping:
+        cache:
+            maxsize: 1000
+    controllers:
+        defaultScope: singleton
+        upload:
+            maxFileSize: 3145728
+            maxRequestSize: 4194304
+    converters:
+        encoding: UTF-8
+    cors:
+        enabled: true
+---
+hibernate:
+    cache:
+        queries: false
+        use_second_level_cache: false
+        use_query_cache: false
+dataSource:
+    pooled: true
+    jmxExport: true
+    driverClassName: "org.postgresql.Driver"
+    dialect: "org.hibernate.dialect.PostgreSQLDialect"
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
+environments:
+    development:
+        dataSource:
+            dbCreate: update
+            url: ${DB_URL:jdbc:postgresql://localhost:5432/assinador}
+    test:
+        dataSource:
+            dbCreate: update
+            url: ${DB_TEST_URL:jdbc:postgresql://localhost:5432/assinador}
+    production:
+        dataSource:
+            dbCreate: update
+            url: ${DB_PRODUCTION_URL}
+            properties:
+                jmxEnabled: true
+                initialSize: 5
+                maxActive: 50
+                minIdle: 5
+                maxIdle: 25
+                maxWait: 10000
+                maxAge: 600000
+                timeBetweenEvictionRunsMillis: 5000
+                minEvictableIdleTimeMillis: 60000
+                validationQuery: SELECT 1
+                validationQueryTimeout: 3
+                validationInterval: 15000
+                testOnBorrow: true
+                testWhileIdle: true
+                testOnReturn: false
+                jdbcInterceptors: ConnectionState
+                defaultTransactionIsolation: 2

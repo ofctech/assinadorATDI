@@ -1,0 +1,23 @@
+# Build outputs
+/build/
+/.gradle/
+/frontend/dist/
+/frontend/.angular/
+/frontend-production.tar.gz
+
+# Dependencies
+/frontend/node_modules/
+
+# IDE and OS files
+/.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Runtime/temp
+/tmp/
+*.lck

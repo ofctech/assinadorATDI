@@ -1,0 +1,260 @@
+<main class="shell">
+  <aside class="brand-panel" aria-label="Identidade institucional">
+    <div class="brand-header">
+      <a href="https://www.incm.gov.mz" target="_blank" rel="noopener" aria-label="Abrir portal INCM">
+        <img
+          class="brand-logo"
+          src="assets/incm-logo-header.webp"
+          alt="INCM - Autoridade Reguladora das Comunicações"
+        />
+      </a>
+      <div class="brand-mark" aria-hidden="true">
+        <span class="signal signal-green"></span>
+        <span class="signal signal-yellow"></span>
+        <span class="signal signal-red"></span>
+      </div>
+    </div>
+    <div>
+      <p class="eyebrow">INCM</p>
+      <h1>Portal de Assinatura Digital</h1>
+      <p class="summary">
+        Autoridade Reguladora das Comunicações. Serviço para assinar e validar documentos PDF.
+      </p>
+    </div>
+    <div class="identity-strip">
+      <span>Regulação</span>
+      <span>Supervisão</span>
+      <span>Fiscalização</span>
+    </div>
+  </aside>
+
+  <section class="workspace" aria-label="Área de trabalho">
+    <header class="topbar">
+      <div>
+        <p class="section-label">Serviços digitais</p>
+        <h2>Assinador avançado</h2>
+      </div>
+
+      @if (isAuthenticated()) {
+        <div class="session">
+          <div>
+            <strong>{{ userName() }}</strong>
+            @if (userEmail()) {
+              <span>{{ userEmail() }}</span>
+            }
+          </div>
+          <button type="button" class="icon-button" title="Terminar sessão" (click)="logout()">
+            <span aria-hidden="true">↪</span>
+          </button>
+        </div>
+      }
+    </header>
+
+    @if (!isAuthenticated()) {
+      <div class="login-wrap">
+        <form class="login-panel" (ngSubmit)="login()">
+        <div>
+          <p class="section-label">Autenticação</p>
+          <h3>Acesso ao portal</h3>
+        </div>
+
+        <label>
+          Utilizador
+          <input name="username" type="text" autocomplete="username" [(ngModel)]="username" />
+        </label>
+
+        <label>
+          Palavra-passe
+          <input name="password" type="password" autocomplete="current-password" [(ngModel)]="password" />
+        </label>
+
+        <button type="submit" class="primary-action" [disabled]="isLoggingIn()">
+          {{ isLoggingIn() ? 'A autenticar...' : 'Entrar' }}
+        </button>
+        </form>
+      </div>
+    } @else {
+      <div class="portal-layout">
+        <nav class="menu-panel" aria-label="Menu de serviços">
+          <button
+            type="button"
+            class="menu-item"
+            [class.active]="activeMenu() === 'sign'"
+            (click)="selectMenu('sign')"
+          >
+            <span class="menu-icon" aria-hidden="true">✓</span>
+            <span>Assinar documento</span>
+          </button>
+          <button
+            type="button"
+            class="menu-item"
+            [class.active]="activeMenu() === 'verify'"
+            (click)="selectMenu('verify')"
+          >
+            <span class="menu-icon" aria-hidden="true">?</span>
+            <span>Validar documento</span>
+          </button>
+        </nav>
+
+        <div class="content-panel">
+          @if (activeMenu() === 'sign') {
+            <form class="tool-panel" (ngSubmit)="signDocument(signFileInput)">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">Assinatura</p>
+                  <h3>Assinar documento</h3>
+                </div>
+              </div>
+
+              <label class="file-drop">
+                <input #signFileInput type="file" accept="application/pdf,.pdf" (change)="selectFile($event, 'sign')" />
+                <span>{{ signFile()?.name || 'Selecionar PDF para assinatura' }}</span>
+                <small>PDF até 3MB</small>
+              </label>
+
+              <div class="switches">
+                <label>
+                  <input name="sendEmail" type="checkbox" [(ngModel)]="sendEmail" />
+                  Enviar email
+                </label>
+                <label>
+                  <input name="attachSignedDocument" type="checkbox" [(ngModel)]="attachSignedDocument" />
+                  Anexar documento assinado
+                </label>
+              </div>
+
+              <div class="actions-row">
+                <button type="submit" class="primary-action" [disabled]="!signFile() || activeOperation() === 'sign'">
+                  {{ activeOperation() === 'sign' ? 'A assinar...' : 'Assinar PDF' }}
+                </button>
+                <button type="button" class="ghost-action" (click)="clearForm('sign', signFileInput)" [disabled]="activeOperation() === 'sign'">
+                  Limpar
+                </button>
+              </div>
+            </form>
+          }
+
+          @if (activeMenu() === 'verify') {
+            <form class="tool-panel" (ngSubmit)="verifyDocument(verifyFileInput)">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">Validação</p>
+                  <h3>Validar documento</h3>
+                </div>
+              </div>
+
+              <label class="file-drop">
+                <input #verifyFileInput type="file" accept="application/pdf,.pdf" (change)="selectFile($event, 'verify')" />
+                <span>{{ verifyFile()?.name || 'Selecionar PDF para validação' }}</span>
+                <small>PDF até 3MB</small>
+              </label>
+
+              <div class="actions-row">
+                <button type="submit" class="primary-action" [disabled]="!verifyFile() || activeOperation() === 'verify'">
+                  {{ activeOperation() === 'verify' ? 'A validar...' : 'Validar PDF' }}
+                </button>
+                <button type="button" class="ghost-action" (click)="clearForm('verify', verifyFileInput)" [disabled]="activeOperation() === 'verify'">
+                  Limpar
+                </button>
+              </div>
+            </form>
+          }
+        </div>
+      </div>
+      @if (verificationSummaries().length) {
+        <section class="result-panel verification-panel" aria-label="Resultado da validação">
+          <div>
+            <p class="section-label">Validação</p>
+            <h3>Assinaturas encontradas: {{ verificationSummaries().length }}</h3>
+          </div>
+
+          <div class="signature-list">
+            @for (result of verificationSummaries(); track $index) {
+              <article class="signature-card">
+                <div class="validation-status" [class.valid]="result.isValid" [class.invalid]="!result.isValid">
+                  <div>
+                    <p class="section-label">Assinatura {{ $index + 1 }}</p>
+                    <h3>{{ result.isValid ? 'Assinatura válida' : 'Assinatura inválida' }}</h3>
+                  </div>
+                  <strong>{{ result.isValid ? 'Válida' : 'Inválida' }}</strong>
+                </div>
+
+                @if (!result.isValid && result.invalidCause) {
+                  <p class="invalid-cause">{{ result.invalidCause }}</p>
+                }
+
+                <div class="certificate-grid">
+                  <section class="certificate-section">
+                    <p class="section-label">Titular do certificado</p>
+                    <dl>
+                      <div>
+                        <dt>Nome</dt>
+                        <dd>{{ result.subject.common_name || '-' }}</dd>
+                      </div>
+                      <div>
+                        <dt>País</dt>
+                        <dd>{{ result.subject.country_name || '-' }}</dd>
+                      </div>
+                      <div>
+                        <dt>Email</dt>
+                        <dd>{{ result.subject.email_address || '-' }}</dd>
+                      </div>
+                      <div>
+                        <dt>NUIT</dt>
+                        <dd>{{ result.subject.nuit || '-' }}</dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <section class="certificate-section">
+                    <p class="section-label">Entidade emissora</p>
+                    <dl>
+                      <div>
+                        <dt>Nome comum</dt>
+                        <dd>{{ result.issuer.common_name || '-' }}</dd>
+                      </div>
+                      <div>
+                        <dt>País</dt>
+                        <dd>{{ result.issuer.country_name || '-' }}</dd>
+                      </div>
+                      <div>
+                        <dt>Organização</dt>
+                        <dd>{{ result.issuer.organization_name || '-' }}</dd>
+                      </div>
+                      <div>
+                        <dt>Unidade orgânica</dt>
+                        <dd>{{ result.issuer.organizational_unit_name || '-' }}</dd>
+                      </div>
+                      <div>
+                        <dt>Província</dt>
+                        <dd>{{ result.issuer.state_or_province_name || '-' }}</dd>
+                      </div>
+                    </dl>
+                  </section>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      }
+
+      @if (verificationResult()) {
+        <section class="result-panel" aria-label="Resposta da validação">
+          <div>
+            <p class="section-label">Resposta</p>
+            <h3>Resultado recebido</h3>
+          </div>
+          <pre>{{ verificationResult() }}</pre>
+        </section>
+      }
+    }
+
+    @if (notice()) {
+      <p class="notice success">{{ notice() }}</p>
+    }
+
+    @if (error()) {
+      <p class="notice error">{{ error() }}</p>
+    }
+  </section>
+</main>
