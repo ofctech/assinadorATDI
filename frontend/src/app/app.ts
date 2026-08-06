@@ -6,9 +6,16 @@ import { finalize } from 'rxjs';
 import { environment } from '../environments/environment';
 
 interface LoginResponse {
+  res?: boolean;
+  success?: boolean;
+  status?: number | string;
   access_token?: string;
   token_type?: string;
   expires_in?: number;
+  otp_required?: boolean;
+  challenge_id?: string;
+  email?: string;
+  message?: string;
   error?: string;
 }
 
@@ -43,13 +50,18 @@ export class App {
 
   username = '';
   password = '';
+  otp = '';
+  otpEmail = '';
   sendEmail = true;
   attachSignedDocument = true;
 
   signFile = signal<File | null>(null);
   verifyFile = signal<File | null>(null);
   token = signal<string | null>(sessionStorage.getItem('assinador_token'));
+  otpChallengeId = signal<string | null>(null);
+  otpExpiresIn = signal<number>(0);
   isLoggingIn = signal(false);
+  isVerifyingOtp = signal(false);
   activeOperation = signal<Operation | null>(null);
   activeMenu = signal<Operation>('sign');
   notice = signal('');
@@ -83,14 +95,25 @@ export class App {
       .subscribe({
         next: (response) => {
           if (!response.access_token) {
-            this.error.set('A resposta de autenticação não trouxe token.');
+            if (response.otp_required && response.challenge_id) {
+              this.otpChallengeId.set(response.challenge_id);
+              this.otpExpiresIn.set(response.expires_in ?? 120);
+              this.otpEmail = response.email ?? '';
+              this.password = '';
+              this.otp = '';
+              this.notice.set(
+                this.otpEmail
+                  ? `Código enviado para ${this.otpEmail}.`
+                  : 'Código de confirmação enviado por email.',
+              );
+              return;
+            }
+
+            this.error.set(response.message || 'A resposta de autenticação não trouxe token.');
             return;
           }
 
-          this.token.set(response.access_token);
-          sessionStorage.setItem('assinador_token', response.access_token);
-          this.password = '';
-          this.notice.set('Sessão iniciada.');
+          this.completeLogin(response.access_token);
         },
         error: (err) => {
           this.error.set(this.extractErrorMessage(err, 'Não foi possível autenticar.'));
@@ -98,9 +121,54 @@ export class App {
       });
   }
 
+  verifyOtp(): void {
+    this.clearMessages();
+
+    if (!this.otpChallengeId()) {
+      this.error.set('Faça login novamente para solicitar um novo código.');
+      return;
+    }
+
+    if (!this.otp) {
+      this.error.set('Informe o código enviado por email.');
+      return;
+    }
+
+    const body = { challenge_id: this.otpChallengeId(), otp: this.otp };
+
+    this.isVerifyingOtp.set(true);
+    this.http
+      .post<LoginResponse>(`${this.apiBaseUrl}/api/ldapLogin/verify-otp`, body, {
+        headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
+      })
+      .pipe(finalize(() => this.isVerifyingOtp.set(false)))
+      .subscribe({
+        next: (response) => {
+          if (!response.access_token) {
+            this.error.set(response.message || 'Código inválido.');
+            return;
+          }
+
+          this.completeLogin(response.access_token);
+        },
+        error: (err) => {
+          this.error.set(this.extractErrorMessage(err, 'Não foi possível confirmar o código.'));
+        },
+      });
+  }
+
+  restartLogin(): void {
+    this.otpChallengeId.set(null);
+    this.otpExpiresIn.set(0);
+    this.otp = '';
+    this.otpEmail = '';
+    this.clearMessages();
+  }
+
   logout(): void {
     this.token.set(null);
     sessionStorage.removeItem('assinador_token');
+    this.restartLogin();
     this.clearMessages();
     this.clearResponses();
   }
@@ -199,6 +267,17 @@ export class App {
       observe: 'response' as const,
       responseType: 'blob' as const,
     };
+  }
+
+  private completeLogin(accessToken: string): void {
+    this.token.set(accessToken);
+    sessionStorage.setItem('assinador_token', accessToken);
+    this.password = '';
+    this.otp = '';
+    this.otpEmail = '';
+    this.otpChallengeId.set(null);
+    this.otpExpiresIn.set(0);
+    this.notice.set('Sessão iniciada.');
   }
 
   private handleOperationResponse(response: HttpResponse<Blob>, downloadFallbackName?: string): void {

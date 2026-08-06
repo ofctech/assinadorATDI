@@ -51,6 +51,23 @@ ldap:
     domainPrefix: "sede\\"
     connectTimeoutMs: 3000
     readTimeoutMs: 3000
+otp:
+    ttlSeconds: 120
+    digits: 6
+    maxAttempts: 5
+    hashSecret: ${OTP_HASH_SECRET:assinador-otp}
+    email:
+        enabled: "${OTP_EMAIL_ENABLED:false}"
+        host: "${OTP_EMAIL_HOST:}"
+        port: "${OTP_EMAIL_PORT:25}"
+        from: "${OTP_EMAIL_FROM:}"
+        username: "${OTP_EMAIL_USERNAME:}"
+        password: "${OTP_EMAIL_PASSWORD:}"
+        startTls: "${OTP_EMAIL_STARTTLS:false}"
+        ssl: "${OTP_EMAIL_SSL:false}"
+        timeoutMs: "${OTP_EMAIL_TIMEOUT_MS:10000}"
+        subject: "${OTP_EMAIL_SUBJECT:Codigo OTP do Assinador}"
+        defaultDomain: "${OTP_EMAIL_DEFAULT_DOMAIN:incm.gov.mz}"
 signer:
     baseUrl: "https://assinadoravancado.gov.mz"
     connectTimeoutMs: 10000

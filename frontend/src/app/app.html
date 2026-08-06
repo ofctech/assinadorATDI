@@ -52,7 +52,8 @@
 
     @if (!isAuthenticated()) {
       <div class="login-wrap">
-        <form class="login-panel" (ngSubmit)="login()">
+        @if (!otpChallengeId()) {
+          <form class="login-panel" (ngSubmit)="login()">
         <div>
           <p class="section-label">Autenticação</p>
           <h3>Acesso ao portal</h3>
@@ -71,7 +72,42 @@
         <button type="submit" class="primary-action" [disabled]="isLoggingIn()">
           {{ isLoggingIn() ? 'A autenticar...' : 'Entrar' }}
         </button>
-        </form>
+          </form>
+        } @else {
+          <form class="login-panel" (ngSubmit)="verifyOtp()">
+            <div>
+              <p class="section-label">Confirmação</p>
+              <h3>Código de acesso</h3>
+              <p class="helper-text">
+                Informe o código enviado por email. O código é válido por {{ otpExpiresIn() }} segundos.
+              </p>
+              @if (otpEmail) {
+                <p class="helper-text">Destino: {{ otpEmail }}</p>
+              }
+            </div>
+
+            <label>
+              Código OTP
+              <input
+                name="otp"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="6"
+                [(ngModel)]="otp"
+              />
+            </label>
+
+            <div class="actions-row">
+              <button type="submit" class="primary-action" [disabled]="isVerifyingOtp()">
+                {{ isVerifyingOtp() ? 'A confirmar...' : 'Confirmar código' }}
+              </button>
+              <button type="button" class="ghost-action" (click)="restartLogin()" [disabled]="isVerifyingOtp()">
+                Voltar
+              </button>
+            </div>
+          </form>
+        }
       </div>
     } @else {
       <div class="portal-layout">

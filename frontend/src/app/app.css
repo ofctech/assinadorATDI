@@ -30,6 +30,7 @@
 .eyebrow, .section-label { margin: 0 0 8px; color: var(--blue-dark); font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
 .brand-panel h1 { max-width: 300px; margin: 0; font-size: 38px; line-height: 1.06; letter-spacing: 0; }
 .summary { max-width: 310px; margin: 18px 0 0; color: var(--muted); font-size: 16px; line-height: 1.55; }
+.helper-text { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
 .identity-strip { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--muted); }
 .identity-strip span { border-left: 3px solid var(--blue); padding-left: 10px; }
 .workspace { padding: 30px; background: #fff; }

@@ -11,6 +11,7 @@ class UrlMappings {
         patch "/$controller/$id(.$format)?"(action: "patch")
 
         "/api/auth"(controller: "auth", action: "login")
+        "/api/auth/verify-otp"(controller: "auth", action: "verifyOtp")
 
         post "/api/signer/sign"(controller: "signer", action: "sign")
         post "/api/signer/verify"(controller: "signer", action: "verify")
@@ -19,6 +20,7 @@ class UrlMappings {
         group "/api/ldapLogin", {
             "/authenticate"(controller: "ldapLogin", action: "authenticate")
             "/login"(controller: "ldapLogin", action: "login")
+            "/verify-otp"(controller: "ldapLogin", action: "verifyOtp")
         }
 
         "/api/jwks"(resources: "jwks")
