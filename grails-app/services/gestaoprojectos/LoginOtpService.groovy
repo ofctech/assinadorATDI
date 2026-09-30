@@ -1,5 +1,6 @@
 package gestaoprojectos
 
+import grails.gorm.transactions.Transactional
 import grails.core.GrailsApplication
 import modelo.agregador.Funcionario
 import seguranca.LoginOtpChallenge
@@ -14,6 +15,7 @@ class LoginOtpService {
     GrailsApplication grailsApplication
     OtpEmailService otpEmailService
 
+    @Transactional
     Map<String, Object> createChallenge(String username) {
         Integer ttlSeconds = grailsApplication.config.getProperty('otp.ttlSeconds', Integer, 120)
         Integer digits = grailsApplication.config.getProperty('otp.digits', Integer, 6)
@@ -40,6 +42,7 @@ class LoginOtpService {
         ] as Map<String, Object>
     }
 
+    @Transactional
     String verify(String challengeId, String otp) {
         Integer maxAttempts = grailsApplication.config.getProperty('otp.maxAttempts', Integer, 5)
         LoginOtpChallenge challenge = LoginOtpChallenge.findByChallengeId(challengeId)
@@ -79,8 +82,23 @@ class LoginOtpService {
             return username
         }
 
-        String defaultDomain = grailsApplication.config.getProperty('otp.email.defaultDomain', String, 'incm.gov.mz')
+        String defaultDomain = defaultEmailDomain()
         "${username}@${defaultDomain}"
+    }
+
+    private String defaultEmailDomain() {
+        String configuredDomain = grailsApplication.config.getProperty('otp.email.defaultDomain', String)
+        if (configuredDomain) {
+            return configuredDomain
+        }
+
+        String fromAddress = grailsApplication.config.getProperty('grails.mail.from_address', String) ?:
+                grailsApplication.config.getProperty('mail.from_address', String)
+        if (fromAddress?.contains('@')) {
+            return fromAddress.split('@', 2)[1]
+        }
+
+        'incm.gov.mz'
     }
 
     private String generateOtp(Integer digits) {

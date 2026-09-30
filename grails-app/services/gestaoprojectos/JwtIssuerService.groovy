@@ -16,7 +16,7 @@ class JwtIssuerService {
     IdpKeyMaterialService idpKeyMaterialService
 
     String issueAccessToken(String subject, List<String> roles = []) {
-        String issuer   = grailsApplication.config.getProperty('idp.issuer', String, "https://assinadorapi.incm.gov.mz")
+        String issuer   = grailsApplication.config.getProperty('idp.issuer', String, "https://assinadorapi.atdi.gov.mz")
         String audience = grailsApplication.config.getProperty('idp.audience', String, "grails-api")
         Integer ttl     = grailsApplication.config.getProperty('idp.tokenTtlSeconds', Integer, 900)
 
@@ -37,7 +37,7 @@ class JwtIssuerService {
                 .keyID("km.kid")
                 .build()*/
 
-        Funcionario funcionario = Funcionario.findWhere(email: subject?.concat("@incm.gov.mz"))
+        Funcionario funcionario = Funcionario.findWhere(email: subject?.concat("@atdi.gov.mz"))
 
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .issuer(issuer)

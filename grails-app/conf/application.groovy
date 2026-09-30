@@ -17,8 +17,10 @@ grails.plugin.springsecurity.interceptUrlMap = [
         [pattern: '/assets/**',                access: ['permitAll']],
         [pattern: '/**/assets/**',             access: ['permitAll']],
         [pattern: '/**/favicon.ico',           access: ['permitAll']],
+        [pattern: '/api/auth/token',            access: ['ROLE_ADMIN']],
         [pattern: '/api/auth/**',              access: ['IS_AUTHENTICATED_ANONYMOUSLY']],
-        [pattern: '/api/signer/**',            access: ['IS_AUTHENTICATED_ANONYMOUSLY']],
+        [pattern: '/api/signer/**',            access: ['ROLE_ADMIN']],
+        [pattern: '/api/statistics/**',        access: ['IS_AUTHENTICATED_ANONYMOUSLY']],
         [pattern: '/api/ldapLogin/**',         access: ['IS_AUTHENTICATED_ANONYMOUSLY']],
         [pattern: '/api/jwks/**',              access: ['IS_AUTHENTICATED_ANONYMOUSLY']],
         [pattern: '/api/.well-known/**',       access: ['IS_AUTHENTICATED_ANONYMOUSLY']],
@@ -54,3 +56,7 @@ grails.plugin.springsecurity.rest.login.passwordPropertyName = 'password'
 grails.plugin.springsecurity.rejectIfNoRule = true
 grails.plugin.springsecurity.fii.rejectPublicInvocations = false
 grails.plugin.springsecurity.password.algorithm = 'bcrypt'
+
+security.bootstrap.admin.username = System.getenv('SIGNER_ADMIN_USERNAME') ?: 'admin@atdi.gov.mz'
+security.bootstrap.admin.password = System.getenv('SIGNER_ADMIN_PASSWORD')
+security.bootstrap.admin.name = System.getenv('SIGNER_ADMIN_NAME') ?: 'Administrador'

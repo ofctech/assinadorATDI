@@ -2,17 +2,20 @@ package modelo.agregador
 
 import grails.converters.JSON
 import grails.core.GrailsApplication
+import grails.plugin.springsecurity.annotation.Secured
 import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.multipart.MultipartFile
 
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
+@Secured('ROLE_ADMIN')
 class SignerController {
 
     private static final Long DEFAULT_MAX_FILE_SIZE_BYTES = 3L * 1024L * 1024L
 
     GrailsApplication grailsApplication
+    def operacaoEstatisticaService
 
     def sign() {
 
@@ -72,6 +75,7 @@ class SignerController {
             if (responseContentType) {
                 response.contentType = responseContentType
             }
+            recordSuccessfulOperation(statusCode, 'signatures')
             response.outputStream.write(responseBody)
             response.outputStream.flush()
 
@@ -140,6 +144,7 @@ class SignerController {
             if (responseContentType) {
                 response.contentType = responseContentType
             }
+            recordSuccessfulOperation(statusCode, 'validations')
             response.outputStream.write(responseBody)
             response.outputStream.flush()
         } catch (Exception e) {
@@ -279,6 +284,18 @@ class SignerController {
         String fileName = file.originalFilename?.toLowerCase()
 
         contentType == 'application/pdf' || fileName?.endsWith('.pdf')
+    }
+
+    private void recordSuccessfulOperation(int statusCode, String tipo) {
+        if (statusCode < 200 || statusCode >= 300) {
+            return
+        }
+
+        try {
+            operacaoEstatisticaService.incrementar(tipo)
+        } catch (Exception e) {
+            log.error("Erro ao gravar estatistica da operacao ${tipo}", e)
+        }
     }
 
     private void renderFileTooLargeResponse(Long fileSizeLimit, Long fileSize) {

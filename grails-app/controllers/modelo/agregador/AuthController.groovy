@@ -1,6 +1,8 @@
 package modelo.agregador
 
+import grails.converters.JSON
 import grails.core.GrailsApplication
+import grails.plugin.springsecurity.annotation.Secured
 
 class AuthController {
 
@@ -9,69 +11,22 @@ class AuthController {
     def jwtIssuerService
     def loginOtpService
 
-    def login() {
+
+    @Secured('ROLE_ADMIN')
+    def generateToken() {
         String username = params.username
-        String password = params.password
 
-        if (!username || !password) {
+        if (!username) {
             response.status = 400
-            render(contentType: "application/json") { [error: "missing_credentials"] }
+            render([res: false, success: false, error: 'missing_username'] as JSON)
             return
         }
 
-        boolean ok = ldapAuthService.authenticate(username, password)
-        if (!ok) {
-            response.status = 401
-            render(contentType: "application/json") { [error: "invalid_credentials"] }
-            return
-        }
+        def roles = ['IS_AUTHENTICATED_ANONYMOUSLY']
+        String token = jwtIssuerService.issueAccessToken(username, roles)
 
-        def challenge = loginOtpService.createChallenge(username)
-
-        render(contentType: "application/json") {
-            [
-                    otp_required: true,
-                    challenge_id: challenge.challengeId,
-                    expires_in: challenge.expiresIn,
-                    email: maskEmail(challenge.email as String)
-            ]
-        }
+        response.status = 201
+        render([res: true, success: true, status: 201, access_token: token, message: 'Logged IN'] as JSON)
     }
 
-    def verifyOtp() {
-        String challengeId = params.challenge_id
-        String otp = params.otp
-
-        if (!challengeId || !otp) {
-            response.status = 400
-            render(contentType: "application/json") { [error: "missing_otp"] }
-            return
-        }
-
-        try {
-            String username = loginOtpService.verify(challengeId, otp)
-            def roles = ["user"]
-            String token = jwtIssuerService.issueAccessToken(username, roles)
-            Integer ttl = grailsApplication.config.getProperty('idp.tokenTtlSeconds', Integer, 900)
-
-            render(contentType: "application/json") {
-                [access_token: token, token_type: "Bearer", expires_in: ttl]
-            }
-        } catch (gestaoprojectos.OtpVerificationException e) {
-            response.status = 401
-            render(contentType: "application/json") { [error: e.message] }
-        }
-    }
-
-    private String maskEmail(String email) {
-        if (!email || !email.contains('@')) {
-            return email
-        }
-
-        def parts = email.split('@', 2)
-        String name = parts[0]
-        String domain = parts[1]
-        String maskedName = name.length() <= 2 ? "${name.take(1)}*" : "${name.take(2)}***"
-        "${maskedName}@${domain}"
-    }
 }

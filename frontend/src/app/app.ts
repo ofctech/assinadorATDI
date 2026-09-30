@@ -32,8 +32,14 @@ interface DistinguishedName {
 interface VerificationSummary {
   isValid: boolean;
   invalidCause: string;
+  signatureTime: string;
   subject: DistinguishedName;
   issuer: DistinguishedName;
+}
+
+interface StatisticsResponse {
+  signatures?: number;
+  validations?: number;
 }
 
 type Operation = 'sign' | 'verify';
@@ -66,14 +72,22 @@ export class App {
   activeMenu = signal<Operation>('sign');
   notice = signal('');
   error = signal('');
+  resultOperation = signal<Operation | null>(null);
   verificationResult = signal<string>('');
   verificationSummaries = signal<VerificationSummary[]>([]);
+  signaturesTotal = signal<number>(0);
+  validationsTotal = signal<number>(0);
 
   isAuthenticated = computed(() => Boolean(this.token()));
   userName = computed(() => this.decodeTokenValue('name') || this.decodeTokenValue('sub') || this.username);
   userEmail = computed(() => this.decodeTokenValue('email'));
+  operationsTotal = computed(() => this.signaturesTotal() + this.validationsTotal());
+  signaturesPercent = computed(() => this.metricPercent(this.signaturesTotal()));
+  validationsPercent = computed(() => this.metricPercent(this.validationsTotal()));
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {
+    this.loadMetrics();
+  }
 
   login(): void {
     this.clearMessages();
@@ -225,6 +239,7 @@ export class App {
     formData.append('attach_signed_document', String(this.attachSignedDocument));
 
     this.activeOperation.set('sign');
+    this.clearResponses();
     this.http
       .post(`${this.apiBaseUrl}/api/signer/sign`, formData, this.responseOptions())
       .pipe(finalize(() => this.clearOperationFile('sign', fileInput)))
@@ -244,8 +259,7 @@ export class App {
     formData.append('file', file);
 
     this.activeOperation.set('verify');
-    this.verificationResult.set('');
-    this.verificationSummaries.set([]);
+    this.clearResponses();
     this.http
       .post(`${this.apiBaseUrl}/api/signer/verify`, formData, this.responseOptions())
       .pipe(finalize(() => this.clearOperationFile('verify', fileInput)))
@@ -291,12 +305,19 @@ export class App {
 
     if (contentType.includes('application/pdf')) {
       this.downloadBlob(body, this.resolveDownloadName(response) || downloadFallbackName || 'documento.pdf');
+      this.loadMetrics();
       this.notice.set('Documento processado com sucesso.');
       return;
     }
 
     body.text().then((text) => {
-      this.verificationResult.set(this.formatResponseText(text));
+      if (this.applySignatureSummaries(text, 'sign')) {
+        this.verificationResult.set('');
+      } else {
+        this.verificationResult.set(this.formatResponseText(text));
+        this.resultOperation.set('sign');
+      }
+      this.loadMetrics();
       this.notice.set('Operação concluída.');
     });
   }
@@ -311,20 +332,11 @@ export class App {
 
     body.text().then((text) => {
       try {
-        const data = JSON.parse(text);
-        const items = Array.isArray(data) ? data : [data];
-        const summaries = items.map((item): VerificationSummary => {
-          const validity = item?.signature?.validity;
-          return {
-            isValid: Boolean(validity?.is_valid),
-            invalidCause: validity?.invalid_cause ?? '',
-            subject: item?.certificate?.subject ?? {},
-            issuer: item?.certificate?.issuer ?? {},
-          };
-        });
-
+        const summaries = this.parseSignatureSummaries(text);
         this.verificationSummaries.set(summaries);
+        this.resultOperation.set('verify');
         this.verificationResult.set('');
+        this.loadMetrics();
 
         const validCount = summaries.filter((summary) => summary.isValid).length;
         const invalidCount = summaries.length - validCount;
@@ -346,9 +358,76 @@ export class App {
       } catch {
         this.verificationSummaries.set([]);
         this.verificationResult.set(this.formatResponseText(text));
+        this.resultOperation.set('verify');
+        this.loadMetrics();
         this.notice.set('Validação concluída.');
       }
     });
+  }
+
+  private loadMetrics(): void {
+    this.http.get<StatisticsResponse>(`${this.apiBaseUrl}/api/statistics/summary`).subscribe({
+      next: (response) => this.applyMetrics(response),
+      error: () => this.applyMetrics({ signatures: 0, validations: 0 }),
+    });
+  }
+
+  private applyMetrics(metrics: StatisticsResponse): void {
+    this.signaturesTotal.set(Number(metrics.signatures) || 0);
+    this.validationsTotal.set(Number(metrics.validations) || 0);
+  }
+
+  private metricPercent(value: number): number {
+    const total = this.operationsTotal();
+    if (!total) {
+      return 0;
+    }
+
+    return Math.round((value / total) * 100);
+  }
+
+  private applySignatureSummaries(text: string, operation: Operation): boolean {
+    try {
+      const summaries = this.parseSignatureSummaries(text);
+      if (!summaries.length) {
+        return false;
+      }
+
+      this.verificationSummaries.set(summaries);
+      this.resultOperation.set(operation);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private parseSignatureSummaries(text: string): VerificationSummary[] {
+    const data = JSON.parse(text);
+    const items = Array.isArray(data) ? data : [data];
+
+    return items.map((item): VerificationSummary => {
+      const validity = item?.signature?.validity;
+      return {
+        isValid: Boolean(validity?.is_valid),
+        invalidCause: validity?.invalid_cause ?? '',
+        signatureTime: this.formatSignatureTime(item?.signature?.signature_time),
+        subject: item?.certificate?.subject ?? {},
+        issuer: item?.certificate?.issuer ?? {},
+      };
+    });
+  }
+
+  private formatSignatureTime(value: unknown): string {
+    const timestamp = Number(value);
+    if (!Number.isFinite(timestamp)) {
+      return '-';
+    }
+
+    const milliseconds = timestamp > 100000000000 ? timestamp : timestamp * 1000;
+    return new Intl.DateTimeFormat('pt-MZ', {
+      dateStyle: 'medium',
+      timeStyle: 'medium',
+    }).format(new Date(milliseconds));
   }
 
   private ensureReady(file: File | null): file is File {
@@ -443,6 +522,7 @@ export class App {
   }
 
   private clearResponses(): void {
+    this.resultOperation.set(null);
     this.verificationResult.set('');
     this.verificationSummaries.set([]);
   }

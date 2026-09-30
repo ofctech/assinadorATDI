@@ -52,62 +52,107 @@
 
     @if (!isAuthenticated()) {
       <div class="login-wrap">
-        @if (!otpChallengeId()) {
-          <form class="login-panel" (ngSubmit)="login()">
+        <section class="login-showcase" aria-label="Resumo de utilização">
+          <div class="showcase-heading">
+            <p class="section-label">Painel operacional</p>
+            <h3>Assinador avançado</h3>
+            <p class="helper-text">
+              Acompanhe a utilização deste navegador enquanto acede aos serviços digitais.
+            </p>
+          </div>
+
+          <div class="metrics-grid" aria-label="Totais de operações">
+            <article>
+              <p>Assinaturas</p>
+              <strong>{{ signaturesTotal() }}</strong>
+            </article>
+            <article>
+              <p>Validações</p>
+              <strong>{{ validationsTotal() }}</strong>
+            </article>
+          </div>
+
+          <div class="usage-chart" aria-label="Gráfico de assinaturas e validações">
+            <div class="chart-row">
+              <div>
+                <strong>Assinaturas</strong>
+                <span>{{ signaturesPercent() }}%</span>
+              </div>
+              <div class="bar-track">
+                <span class="bar-fill signature-fill" [style.width.%]="signaturesPercent()"></span>
+              </div>
+            </div>
+            <div class="chart-row">
+              <div>
+                <strong>Validações</strong>
+                <span>{{ validationsPercent() }}%</span>
+              </div>
+              <div class="bar-track">
+                <span class="bar-fill validation-fill" [style.width.%]="validationsPercent()"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div>
-          <p class="section-label">Autenticação</p>
-          <h3>Acesso ao portal</h3>
-        </div>
-
-        <label>
-          Utilizador
-          <input name="username" type="text" autocomplete="username" [(ngModel)]="username" />
-        </label>
-
-        <label>
-          Palavra-passe
-          <input name="password" type="password" autocomplete="current-password" [(ngModel)]="password" />
-        </label>
-
-        <button type="submit" class="primary-action" [disabled]="isLoggingIn()">
-          {{ isLoggingIn() ? 'A autenticar...' : 'Entrar' }}
-        </button>
-          </form>
-        } @else {
-          <form class="login-panel" (ngSubmit)="verifyOtp()">
+          @if (!otpChallengeId()) {
+            <form class="login-panel" (ngSubmit)="login()">
             <div>
-              <p class="section-label">Confirmação</p>
-              <h3>Código de acesso</h3>
-              <p class="helper-text">
-                Informe o código enviado por email. O código é válido por {{ otpExpiresIn() }} segundos.
-              </p>
-              @if (otpEmail) {
-                <p class="helper-text">Destino: {{ otpEmail }}</p>
-              }
+              <p class="section-label">Autenticação</p>
+              <h3>Acesso ao portal</h3>
+              <p class="helper-text">Entre com as credenciais institucionais para receber o código OTP.</p>
             </div>
 
             <label>
-              Código OTP
-              <input
-                name="otp"
-                type="text"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                maxlength="6"
-                [(ngModel)]="otp"
-              />
+              Utilizador
+              <input name="username" type="text" autocomplete="username" [(ngModel)]="username" />
             </label>
 
-            <div class="actions-row">
-              <button type="submit" class="primary-action" [disabled]="isVerifyingOtp()">
-                {{ isVerifyingOtp() ? 'A confirmar...' : 'Confirmar código' }}
-              </button>
-              <button type="button" class="ghost-action" (click)="restartLogin()" [disabled]="isVerifyingOtp()">
-                Voltar
-              </button>
+            <label>
+              Palavra-passe
+              <input name="password" type="password" autocomplete="current-password" [(ngModel)]="password" />
+            </label>
+
+            <button type="submit" class="primary-action" [disabled]="isLoggingIn()">
+              {{ isLoggingIn() ? 'A autenticar...' : 'Entrar' }}
+            </button>
+            </form>
+          } @else {
+            <form class="login-panel" (ngSubmit)="verifyOtp()">
+              <div>
+                <p class="section-label">Confirmação</p>
+                <h3>Código de acesso</h3>
+                <p class="helper-text">
+                  Informe o código enviado por email. O código é válido por {{ otpExpiresIn() }} segundos.
+                </p>
+                @if (otpEmail) {
+                  <p class="helper-text">Destino: {{ otpEmail }}</p>
+                }
+              </div>
+
+              <label>
+                Código OTP
+                <input
+                  name="otp"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="6"
+                  [(ngModel)]="otp"
+                />
+              </label>
+
+              <div class="actions-row">
+                <button type="submit" class="primary-action" [disabled]="isVerifyingOtp()">
+                  {{ isVerifyingOtp() ? 'A confirmar...' : 'Confirmar código' }}
+                </button>
+                <button type="button" class="ghost-action" (click)="restartLogin()" [disabled]="isVerifyingOtp()">
+                  Voltar
+                </button>
+              </div>
+            </form>
+          }
             </div>
-          </form>
-        }
       </div>
     } @else {
       <div class="portal-layout">
@@ -200,8 +245,8 @@
       @if (verificationSummaries().length) {
         <section class="result-panel verification-panel" aria-label="Resultado da validação">
           <div>
-            <p class="section-label">Validação</p>
-            <h3>Assinaturas encontradas: {{ verificationSummaries().length }}</h3>
+            <p class="section-label">{{ resultOperation() === 'sign' ? 'Assinatura' : 'Validação' }}</p>
+            <h3>{{ resultOperation() === 'sign' ? 'Dados da assinatura' : 'Assinaturas encontradas: ' + verificationSummaries().length }}</h3>
           </div>
 
           <div class="signature-list">
@@ -223,6 +268,10 @@
                   <section class="certificate-section">
                     <p class="section-label">Titular do certificado</p>
                     <dl>
+                      <div>
+                        <dt>Hora da assinatura</dt>
+                        <dd>{{ result.signatureTime || '-' }}</dd>
+                      </div>
                       <div>
                         <dt>Nome</dt>
                         <dd>{{ result.subject.common_name || '-' }}</dd>

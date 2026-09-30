@@ -147,6 +147,64 @@ Credenciais invalidas:
 
 Observacao importante: este endpoint renderiza os erros acima sem definir explicitamente `response.status`. Na pratica, o frontend pode receber HTTP `200 OK` mesmo quando `success` e `false`. Por isso, para este endpoint, o frontend deve validar `otp_required` e `challenge_id` antes de avancar para a etapa do OTP.
 
+### POST /api/ldapLogin/login-without-twofactor
+
+Endpoint para aplicacoes de terceiros que precisam autenticar no LDAP e receber o JWT sem desafio OTP.
+
+Este endpoint valida `username` e `password` no LDAP e, em caso de sucesso, devolve directamente `access_token`.
+
+### Requisicao
+
+```http
+POST /api/ldapLogin/login-without-twofactor
+Content-Type: application/json
+```
+
+```json
+{
+  "username": "utilizador",
+  "password": "palavra-passe"
+}
+```
+
+### Resposta de sucesso
+
+HTTP `200 OK`
+
+```json
+{
+  "res": true,
+  "success": true,
+  "status": 201,
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "message": "Logged IN"
+}
+```
+
+### Respostas de erro
+
+Credenciais ausentes:
+
+```json
+{
+  "res": false,
+  "success": false,
+  "status": "E0",
+  "message": "missing_credentials."
+}
+```
+
+Credenciais invalidas:
+
+```json
+{
+  "res": false,
+  "success": false,
+  "status": "E0",
+  "message": "Invalid Credentials."
+}
+```
+
 ### POST /api/ldapLogin/verify-otp
 
 Endpoint usado pelo frontend para confirmar o OTP enviado por email. So depois desta confirmacao o backend emite o JWT.
